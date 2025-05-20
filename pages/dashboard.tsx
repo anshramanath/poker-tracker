@@ -21,14 +21,18 @@ import {
   TextField,
   Stack,
   Paper,
+  CircularProgress,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import { Session } from '@/lib/types'
 
 export default function Dashboard() {
-  const [sessions, setSessions] = useState<any[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
   const [open, setOpen] = useState(false)
   const [sessionName, setSessionName] = useState('')
+  const [loading, setLoading] = useState<boolean>(true)
+  const [creating, setCreating] = useState<boolean>(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -40,22 +44,35 @@ export default function Dashboard() {
 
     const q = query(collection(db, 'sessions'), where('userId', '==', user.uid))
     const unsub = onSnapshot(q, (snapshot) => {
-      setSessions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+      setSessions(
+        snapshot.docs.map((doc): Session => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            name: data.name ?? '',
+            userId: data.userId ?? '',
+            createdAt: data.createdAt ?? { seconds: 0, nanoseconds: 0 },
+          }
+        })
+      )      
+      setLoading(false)
     })
 
     return () => unsub()
-  }, [])
+  }, [router])
 
   const handleOpen = () => setOpen(true)
   const handleClose = () => {
     setOpen(false)
     setSessionName('')
+    setCreating(false)
   }
 
   const handleCreateSession = async () => {
     const user = auth.currentUser
     if (!user || !sessionName.trim()) return
 
+    setCreating(true)
     await addDoc(collection(db, 'sessions'), {
       userId: user.uid,
       name: sessionName.trim(),
@@ -68,6 +85,14 @@ export default function Dashboard() {
   const handleDeleteSession = async (sessionId: string) => {
     const sessionRef = doc(db, 'sessions', sessionId)
     await deleteDoc(sessionRef)
+  }
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (
@@ -120,7 +145,7 @@ export default function Dashboard() {
                             day: 'numeric',
                             hour: 'numeric',
                             minute: '2-digit',
-                          })                          
+                          })
                         : 'Just now'}
                     </Typography>
                   </Box>
@@ -170,10 +195,20 @@ export default function Dashboard() {
               onChange={(e) => setSessionName(e.target.value)}
               sx={{ mb: 2 }}
               size="small"
+              disabled={creating}
             />
             <Stack direction="row" spacing={1}>
-              <Button fullWidth variant="outlined" onClick={handleClose}>Cancel</Button>
-              <Button fullWidth variant="contained" onClick={handleCreateSession}>Create</Button>
+              <Button fullWidth variant="outlined" onClick={handleClose} disabled={creating}>
+                Cancel
+              </Button>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleCreateSession}
+                disabled={creating}
+              >
+                {creating ? <CircularProgress size={20} color="inherit" /> : 'Create'}
+              </Button>
             </Stack>
           </Box>
         </Modal>

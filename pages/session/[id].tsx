@@ -20,27 +20,31 @@ import {
   Modal,
   IconButton,
   Paper,
+  CircularProgress
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CloseIcon from '@mui/icons-material/Close'
 import { db } from '@/lib/firebase'
+import { Player } from '@/lib/types'
 
 export default function SessionDetail() {
   const router = useRouter()
   const { id } = router.query
 
   const [sessionName, setSessionName] = useState('')
-  const [players, setPlayers] = useState<any[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [playerName, setPlayerName] = useState('')
   const [buyIn, setBuyIn] = useState('')
-  const [editingPlayer, setEditingPlayer] = useState<any | null>(null)
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
   const [editName, setEditName] = useState('')
   const [editCashOut, setEditCashOut] = useState('')
   const [editBuyIns, setEditBuyIns] = useState<number[]>([])
-  const [buyInModalPlayer, setBuyInModalPlayer] = useState<any | null>(null)
-  const [cashOutModalPlayer, setCashOutModalPlayer] = useState<any | null>(null)
+  const [buyInModalPlayer, setBuyInModalPlayer] = useState<Player | null>(null)
+  const [cashOutModalPlayer, setCashOutModalPlayer] = useState<Player | null>(null)
   const [newBuyInAmount, setNewBuyInAmount] = useState('')
   const [newCashOutAmount, setNewCashOutAmount] = useState('')
 
@@ -48,14 +52,26 @@ export default function SessionDetail() {
     if (!id) return
 
     const sessionRef = doc(db, 'sessions', id as string)
+
     const unsubPlayers = onSnapshot(collection(sessionRef, 'players'), (snapshot) => {
-      setPlayers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+      setPlayers(
+        snapshot.docs.map((doc): Player => {
+          const data = doc.data()
+          return {
+            id: doc.id,
+            name: data.name ?? '',
+            buyIns: data.buyIns ?? [],
+            cashOut: data.cashOut ?? null,
+          }
+        })
+      )
     })
 
     getDoc(sessionRef).then((docSnap) => {
       if (docSnap.exists()) {
         setSessionName(docSnap.data().name)
       }
+      setLoading(false)
     })
 
     return () => unsubPlayers()
@@ -73,12 +89,12 @@ export default function SessionDetail() {
     setBuyIn('')
   }
 
-  const getNet = (player: any) => {
+  const getNet = (player: Player) => {
     const totalBuyIn = player.buyIns?.reduce((a: number, b: number) => a + b, 0) || 0
     return (player.cashOut ?? 0) - totalBuyIn
   }
 
-  const openEditModal = (player: any) => {
+  const openEditModal = (player: Player) => {
     setEditingPlayer(player)
     setEditName(player.name)
     setEditCashOut(player.cashOut !== null ? String(player.cashOut) : '')
@@ -91,12 +107,12 @@ export default function SessionDetail() {
     await deleteDoc(playerRef)
   }
 
-  const openBuyInModal = (player: any) => {
+  const openBuyInModal = (player: Player) => {
     setBuyInModalPlayer(player)
     setNewBuyInAmount('')
   }
 
-  const openCashOutModal = (player: any) => {
+  const openCashOutModal = (player: Player) => {
     setCashOutModalPlayer(player)
     setNewCashOutAmount(player.cashOut !== null ? String(player.cashOut) : '')
   }
@@ -140,6 +156,14 @@ export default function SessionDetail() {
     setEditBuyIns(editBuyIns.filter((_, i) => i !== index))
   }
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    )
+  }
+
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f5f5">
       <Paper elevation={3} sx={{ p: 4, width: 700 }}>
@@ -158,7 +182,7 @@ export default function SessionDetail() {
                 sx={{ flex: 1, minWidth: 120 }}
                 />
                 <TextField
-                label="Buy-in"
+                label="Buy-In"
                 type="number"
                 value={buyIn}
                 onChange={(e) => setBuyIn(e.target.value)}
@@ -205,8 +229,8 @@ export default function SessionDetail() {
                         Net: ${net}
                       </Typography>
                     </Box>
-                    <Typography variant="body2">Total Buy-ins: ${totalBuyIn}</Typography>
-                    <Typography variant="body2">Cash-out: {player.cashOut !== null ? `$${player.cashOut}` : '—'}</Typography>
+                    <Typography variant="body2">Total Buy-Ins: ${totalBuyIn}</Typography>
+                    <Typography variant="body2">Cash-Out: {player.cashOut !== null ? `$${player.cashOut}` : '—'}</Typography>
                     <Box mt={2} display="flex" gap={1} flexWrap="wrap">
                       {!isCashedOut ? (
                         <>

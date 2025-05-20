@@ -15,6 +15,7 @@ import {
   Stack,
   Button,
   Paper,
+  CircularProgress,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 
@@ -30,6 +31,7 @@ export default function LedgerPage() {
   const { id } = router.query
   const [players, setPlayers] = useState<Player[]>([])
   const [sessionName, setSessionName] = useState('')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -43,10 +45,19 @@ export default function LedgerPage() {
       if (docSnap.exists()) {
         setSessionName(docSnap.data().name)
       }
+      setLoading(false)
     })
 
     return () => unsub()
   }, [id])
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f5f5">
@@ -56,7 +67,9 @@ export default function LedgerPage() {
         </Typography>
 
         {players.length === 0 ? (
-          <Typography>No players to show.</Typography>
+          <Box mb={4}>
+            <Typography>No players to show.</Typography>
+          </Box>
         ) : (
           <Stack spacing={2} mb={4}>
             {players.map((player) => {
@@ -75,7 +88,7 @@ export default function LedgerPage() {
                       Total Buy-Ins: ${totalBuyIn}
                     </Typography>
                     <Typography color="text.secondary">
-                      Buy-In History: {player.buyIns.map((amt, i) => `$${amt}`).join(', ')}
+                      Buy-In History: {player.buyIns.map((amt) => `$${amt}`).join(', ')}
                     </Typography>
                     {isCashedOut && (
                       <>
