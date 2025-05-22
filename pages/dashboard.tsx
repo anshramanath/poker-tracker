@@ -10,6 +10,7 @@ import {
   Timestamp,
   deleteDoc,
   doc,
+  updateDoc,
 } from 'firebase/firestore'
 import {
   Box,
@@ -22,9 +23,12 @@ import {
   Stack,
   Paper,
   CircularProgress,
+  IconButton,
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import CloseIcon from '@mui/icons-material/Close'
 import { Session } from '@/lib/types'
 
 export default function Dashboard() {
@@ -33,6 +37,8 @@ export default function Dashboard() {
   const [sessionName, setSessionName] = useState('')
   const [loading, setLoading] = useState<boolean>(true)
   const [creating, setCreating] = useState<boolean>(false)
+  const [editingSession, setEditingSession] = useState<Session | null>(null)
+  const [editSessionName, setEditSessionName] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function Dashboard() {
             createdAt: data.createdAt ?? { seconds: 0, nanoseconds: 0 },
           }
         })
-      )      
+      )
       setLoading(false)
     })
 
@@ -85,6 +91,13 @@ export default function Dashboard() {
   const handleDeleteSession = async (sessionId: string) => {
     const sessionRef = doc(db, 'sessions', sessionId)
     await deleteDoc(sessionRef)
+  }
+
+  const handleUpdateSessionName = async () => {
+    if (!editingSession) return
+    const sessionRef = doc(db, 'sessions', editingSession.id)
+    await updateDoc(sessionRef, { name: editSessionName.trim() })
+    setEditingSession(null)
   }
 
   if (loading) {
@@ -136,7 +149,19 @@ export default function Dashboard() {
                   }}
                 >
                   <Box>
-                    <Typography fontWeight={500}>{s.name}</Typography>
+                    <Box display="flex" alignItems="center">
+                      <Typography fontWeight={500}>{s.name}</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditingSession(s)
+                          setEditSessionName(s.name)
+                        }}
+                        sx={{ ml: 1 }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                     <Typography variant="body2" color="text.secondary">
                       {s.createdAt?.seconds
                         ? new Date(s.createdAt.seconds * 1000).toLocaleString([], {
@@ -173,6 +198,7 @@ export default function Dashboard() {
           </Stack>
         )}
 
+        {/* Create Modal */}
         <Modal open={open} onClose={handleClose}>
           <Box
             sx={{
@@ -210,6 +236,45 @@ export default function Dashboard() {
                 {creating ? <CircularProgress size={20} color="inherit" /> : 'Create'}
               </Button>
             </Stack>
+          </Box>
+        </Modal>
+
+        {/* Edit Modal */}
+        <Modal open={!!editingSession} onClose={() => setEditingSession(null)}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              bgcolor: 'background.paper',
+              p: 3,
+              borderRadius: 2,
+              boxShadow: 24,
+              width: 300,
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6">Edit Session</Typography>
+              <IconButton onClick={() => setEditingSession(null)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <TextField
+              fullWidth
+              label="Session Name"
+              value={editSessionName}
+              onChange={(e) => setEditSessionName(e.target.value)}
+              sx={{ mb: 2 }}
+              size="small"
+            />
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleUpdateSessionName}
+            >
+              Save
+            </Button>
           </Box>
         </Modal>
       </Paper>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { auth } from '@/lib/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
@@ -8,13 +8,22 @@ import {
   Button,
   Typography,
   Paper,
+  CircularProgress,
+  Stack,
 } from '@mui/material'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  useEffect(() => {
+    if (router.isReady) {
+      setLoading(false)
+    }
+  }, [router.isReady])
 
   const login = async () => {
     try {
@@ -34,50 +43,66 @@ export default function Login() {
     }
   }
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    )
+  }
+
   return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f5f5" position="relative">
-      <Box>
-        <Paper elevation={3} sx={{ p: 4, width: 350 }}>
-          <Typography variant="h5" align="center" mb={3}>
-            Poker Tracker
-          </Typography>
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      bgcolor="#f5f5f5"
+    >
+      <Paper
+        elevation={4}
+        sx={{
+          p: 5,
+          width: 400,
+          borderRadius: 3,
+          backgroundColor: 'white',
+        }}
+      >
+        <Typography variant="h4" fontWeight="bold" align="center" mb={3}>
+          Poker Tracker
+        </Typography>
+
+        <Stack spacing={2}>
           <TextField
-            fullWidth
             label="Email"
             type="email"
+            fullWidth
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            sx={{ mb: 2 }}
           />
           <TextField
-            fullWidth
             label="Password"
             type="password"
+            fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 3 }}
           />
-          <Box display="flex" gap={2}>
+          <Stack direction="row" spacing={2}>
             <Button variant="contained" fullWidth onClick={login}>
               Login
             </Button>
             <Button variant="outlined" fullWidth onClick={signup}>
               Sign Up
             </Button>
-          </Box>
-        </Paper>
+          </Stack>
+        </Stack>
 
         {message && (
-          <Typography
-            color="error"
-            textAlign="center"
-            mt={2}
-            sx={{ position: 'absolute', top: 'calc(50% + 155px)', left: '50%', transform: 'translateX(-50%)' }}
-          >
+          <Typography color="error" align="center" mt={2}>
             {message}
           </Typography>
         )}
-      </Box>
+      </Paper>
     </Box>
   )
 }
